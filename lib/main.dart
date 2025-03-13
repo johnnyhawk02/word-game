@@ -60,7 +60,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   final FlutterTts flutterTts = FlutterTts();
   late GameSettings settings;
   bool isSettingsLoaded = false;
-  late AnimationController _dragAnimationController;
+  late AnimationController _bounceController;
 
   final List<Map<String, dynamic>> items = [
     {'name': 'Apple', 'image': 'assets/apple.jpeg'},
@@ -116,7 +116,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   late List<Map<String, dynamic>> gameItems;
   String currentWord = '';
   bool isCorrect = false;
-  late AnimationController _bounceController;
   final Map<String, bool> _isHovered = {};
 
   @override
@@ -126,10 +125,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     _bounceController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
-    )..repeat(reverse: true);
-    _dragAnimationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
     )..repeat(reverse: true);
     _loadSettings();
   }
@@ -280,7 +275,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   @override
   void dispose() {
     _bounceController.dispose();
-    _dragAnimationController.dispose();
     flutterTts.stop();
     super.dispose();
   }
@@ -394,38 +388,27 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
               onTap: () => _speakWord(currentWord),
               child: Draggable<String>(
                 data: currentWord,
-                feedback: AnimatedBuilder(
-                  animation: _dragAnimationController,
-                  builder: (context, child) {
-                    return Transform.scale(
-                      scale: 1.0 + (_dragAnimationController.value * 0.2),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: Colors.blue,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
-                                blurRadius: 8,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Text(
-                            currentWord,
-                            style: const TextStyle(
-                              fontSize: 36,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
+                maxSimultaneousDrags: 1,
+                hitTestBehavior: HitTestBehavior.translucent,
+                feedback: RepaintBoundary(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.9),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        currentWord,
+                        style: const TextStyle(
+                          fontSize: 36,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
                       ),
-                    );
-                  },
+                    ),
+                  ),
                 ),
                 childWhenDragging: Container(
                   padding: const EdgeInsets.all(20),
