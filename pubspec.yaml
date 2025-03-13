@@ -1,0 +1,75 @@
+name: word_game
+description: A word matching game for children
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.1.4 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.2
+  google_fonts: ^6.1.0
+  simple_animations: ^5.0.2
+  supercharged: ^2.1.1
+  flutter_tts: ^3.8.5
+  shared_preferences: ^2.2.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+
+flutter:
+  uses-material-design: true
+  
+  assets:
+    - assets/apple.jpeg
+    - assets/baby.jpeg
+    - assets/bag.jpeg
+    - assets/ball.jpeg
+    - assets/banana.jpeg
+    - assets/bath.jpeg
+    - assets/bear.jpeg
+    - assets/bed.jpeg
+    - assets/bird.jpeg
+    - assets/biscuit.jpeg
+    - assets/blocks.jpeg
+    - assets/book.jpeg
+    - assets/brush.jpeg
+    - assets/brushing.jpeg
+    - assets/car.jpeg
+    - assets/cat.jpeg
+    - assets/chair.jpeg
+    - assets/coat.jpeg
+    - assets/cow.jpeg
+    - assets/crying.jpeg
+    - assets/cup.jpeg
+    - assets/daddy.jpeg
+    - assets/dog.jpeg
+    - assets/doll.jpeg
+    - assets/drink.jpeg
+    - assets/drinking.jpeg
+    - assets/duck.jpeg
+    - assets/eating.jpeg
+    - assets/eyes.jpeg
+    - assets/fish.jpeg
+    - assets/flower.jpeg
+    - assets/hair.jpeg
+    - assets/hat.jpeg
+    - assets/keys.jpeg
+    - assets/mouth.jpeg
+    - assets/mummy.jpeg
+    - assets/nose.jpeg
+    - assets/phone.jpeg
+    - assets/pig.jpeg
+    - assets/sheep.jpeg
+    - assets/shoes.jpeg
+    - assets/sitting.jpeg
+    - assets/sleeping.jpeg
+    - assets/socks.jpeg
+    - assets/spoon.jpeg
+    - assets/table.jpeg
+    - assets/walk.jpeg
+    - assets/wash.jpeg
