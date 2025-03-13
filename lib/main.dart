@@ -28,6 +28,7 @@ class GameSettings {
 }
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
 
@@ -61,6 +62,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   late GameSettings settings;
   bool isSettingsLoaded = false;
   late AnimationController _bounceController;
+  bool _isDisposed = false;
 
   final List<Map<String, dynamic>> items = [
     {'name': 'Apple', 'image': 'assets/apple.jpeg'},
@@ -112,29 +114,38 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     {'name': 'Walk', 'image': 'assets/walk.jpeg'},
     {'name': 'Wash', 'image': 'assets/wash.jpeg'},
   ];
-  
   late List<Map<String, dynamic>> gameItems;
   String currentWord = '';
-  bool isCorrect = false;
   final Map<String, bool> _isHovered = {};
 
   @override
   void initState() {
     super.initState();
-    _setupNewRound();
     _bounceController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
-    _loadSettings();
+    _initializeGame();
+  }
+
+  Future<void> _initializeGame() async {
+    if (_isDisposed) return;
+    await _loadSettings();
+    if (!_isDisposed) {
+      _setupNewRound();
+    }
   }
 
   Future<void> _loadSettings() async {
+    if (_isDisposed) return;
+
     settings = await GameSettings.load();
     await _initTts();
-    setState(() {
-      isSettingsLoaded = true;
-    });
+    if (!_isDisposed) {
+      setState(() {
+        isSettingsLoaded = true;
+      });
+    }
   }
 
   Future<void> _initTts() async {
@@ -190,93 +201,17 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 
   void _showCelebrationAnimation(BuildContext context) {
     flutterTts.speak("Well done ${settings.userName}!");
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          child: TweenAnimationBuilder(
-            duration: const Duration(milliseconds: 2000),
-            tween: Tween<double>(begin: 0, end: 1),
-            curve: Curves.easeInOut,
-            builder: (context, double value, child) {
-              return Transform.scale(
-                scale: value < 0.5 ? value * 2 : 1.0,
-                child: Opacity(
-                  opacity: value < 0.8 ? 1.0 : (1.0 - ((value - 0.8) * 5)),
-                  child: Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.9),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SparkleAnimation(
-                          child: TweenAnimationBuilder<double>(
-                            tween: Tween<double>(
-                              begin: 1.0,
-                              end: 1.2,
-                            ),
-                            duration: const Duration(milliseconds: 500),
-                            curve: Curves.easeInOut,
-                            builder: (context, scale, child) {
-                              return Transform.scale(
-                                scale: scale,
-                                child: const Icon(
-                                  Icons.star,
-                                  color: Colors.yellow,
-                                  size: 120,
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                        const Text(
-                          'Well Done!',
-                          style: TextStyle(
-                            fontSize: 30,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-            onEnd: () {
-              Future.delayed(const Duration(milliseconds: 200), () {
-                Navigator.of(context).pop();
-                setState(() {
-                  _setupNewRound();
-                });
-              });
-            },
-          ),
-        );
-      },
-    );
+    _setupNewRound();
   }
 
   void _setupNewRound() {
-    // Randomly select 3 items for this round
-    items.shuffle();
-    gameItems = items.take(3).toList();
-    gameItems.shuffle();
-    // Randomly select one of the three items as the target word
-    currentWord = gameItems[Random().nextInt(3)]['name'];
-    isCorrect = false;
-  }
-
-  @override
-  void dispose() {
-    _bounceController.dispose();
-    flutterTts.stop();
-    super.dispose();
+    setState(() {
+      items.shuffle();
+      gameItems = items.take(3).toList();
+      gameItems.shuffle();
+      currentWord = gameItems[Random().nextInt(3)]['name'];
+      _isHovered.clear();
+    });
   }
 
   @override
@@ -288,7 +223,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         ),
       );
     }
-    
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Match the Word', style: GoogleFonts.aBeeZee()),
@@ -300,103 +235,127 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
           ),
         ],
       ),
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: gameItems.map((item) {
-              return DragTarget<String>(
-                builder: (context, candidateData, rejectedData) {
-                  return MouseRegion(
-                    onEnter: (_) => setState(() => _isHovered[item['name']] = true),
-                    onExit: (_) => setState(() => _isHovered[item['name']] = false),
-                    child: GestureDetector(
-                      onTap: () => _speakWord(item['name']),
-                      child: AnimatedScale(
-                        scale: _isHovered[item['name']] == true ? 1.1 : 1.0,
-                        duration: const Duration(milliseconds: 200),
-                        child: Column(
-                          children: [
-                            Container(
-                              width: 200,
-                              height: 200,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: candidateData.isNotEmpty ? Colors.green : Colors.grey,
-                                  width: 3,
-                                ),
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.asset(
-                                  item['image'],
-                                  fit: BoxFit.cover,
-                                ),
+      body: RepaintBoundary(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: gameItems.map((item) {
+                return RepaintBoundary(
+                  child: DragTarget<String>(
+                    onWillAccept: (data) => data != null,
+                    onAccept: (data) {
+                      if (data == item['name']) {
+                        _showCelebrationAnimation(context);
+                      }
+                    },
+                    builder: (context, candidateData, rejectedData) {
+                      return MouseRegion(
+                        onEnter: (_) => setState(() => _isHovered[item['name']] = true),
+                        onExit: (_) => setState(() => _isHovered[item['name']] = false),
+                        child: RepaintBoundary(
+                          child: GestureDetector(
+                            onTap: () => _speakWord(item['name']),
+                            child: AnimatedScale(
+                              scale: _isHovered[item['name']] == true ? 1.1 : 1.0,
+                              duration: const Duration(milliseconds: 150),
+                              curve: Curves.easeOutCubic,
+                              child: Column(
+                                children: [
+                                  Container(
+                                    width: 200,
+                                    height: 200,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: candidateData.isNotEmpty ? Colors.green : Colors.grey,
+                                        width: 3,
+                                      ),
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Image.asset(
+                                        item['image'],
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    item['name'],
+                                    style: const TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(height: 10),
-                            Text(
-                              item['name'],
-                              style: const TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                              ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              }).toList(),
+            ),
+
+            // Bouncing draggable word
+            RepaintBoundary(
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, -0.03),
+                  end: const Offset(0, 0.03),
+                ).animate(CurvedAnimation(
+                  parent: _bounceController,
+                  curve: Curves.easeInOut,
+                )),
+                child: GestureDetector(
+                  onTap: () => _speakWord(currentWord),
+                  child: Draggable<String>(
+                    data: currentWord,
+                    maxSimultaneousDrags: 1,
+                    hitTestBehavior: HitTestBehavior.translucent,
+                    feedback: RepaintBoundary(
+                      child: Material(
+                        color: Colors.transparent,
+                        child: Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withOpacity(0.7),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            currentWord,
+                            style: const TextStyle(
+                              fontSize: 36,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
                             ),
-                          ],
+                          ),
                         ),
                       ),
                     ),
-                  );
-                },
-                onWillAccept: (data) => true,
-                onAccept: (data) {
-                  if (data == item['name']) {
-                    setState(() {
-                      isCorrect = true;
-                    });
-                    _showCelebrationAnimation(context);
-                    Future.delayed(const Duration(milliseconds: 1500), () {
-                      setState(() {
-                        _setupNewRound();
-                      });
-                    });
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Try again!'),
-                        backgroundColor: Colors.red,
+                    childWhenDragging: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    );
-                  }
-                },
-              );
-            }).toList(),
-          ),
-
-          // Bouncing draggable word
-          SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, -0.05),
-              end: const Offset(0, 0.05),
-            ).animate(CurvedAnimation(
-              parent: _bounceController,
-              curve: Curves.easeInOut,
-            )),
-            child: GestureDetector(
-              onTap: () => _speakWord(currentWord),
-              child: Draggable<String>(
-                data: currentWord,
-                maxSimultaneousDrags: 1,
-                hitTestBehavior: HitTestBehavior.translucent,
-                feedback: RepaintBoundary(
-                  child: Material(
-                    color: Colors.transparent,
+                      child: Text(
+                        currentWord,
+                        style: TextStyle(
+                          fontSize: 36,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white.withOpacity(0.5),
+                        ),
+                      ),
+                    ),
                     child: Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.9),
+                        color: Colors.blue,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
@@ -410,111 +369,25 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                     ),
                   ),
                 ),
-                childWhenDragging: Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Colors.grey.withOpacity(0.5),
-                      width: 2,
-                      style: BorderStyle.solid,
-                    ),
-                  ),
-                ),
-                child: Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.blue,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    currentWord,
-                    style: const TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
-  }
-}
-
-class SparkleAnimation extends StatefulWidget {
-  final Widget child;
-  final bool isRepeating;
-
-  const SparkleAnimation({
-    super.key, 
-    required this.child,
-    this.isRepeating = true,
-  });
-
-  @override
-  State<SparkleAnimation> createState() => _SparkleAnimationState();
-}
-
-class _SparkleAnimationState extends State<SparkleAnimation> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 1500),
-      vsync: this,
-    )..addStatusListener((status) {
-      if (status == AnimationStatus.completed && widget.isRepeating) {
-        _controller.reset();
-        _controller.forward();
-      }
-    });
-    _controller.forward();
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _isDisposed = true;
+    _bounceController.dispose();
+    flutterTts.stop();
     super.dispose();
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        widget.child,
-        ...List.generate(12, (index) => _buildSparkle(index)),
-      ],
-    );
-  }
-
-  Widget _buildSparkle(int index) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        final value = _controller.value;
-        return Positioned(
-          left: cos(index * 30 * pi / 180) * 100 * value,
-          top: sin(index * 30 * pi / 180) * 100 * value,
-          child: Opacity(
-            opacity: max(0, 1 - value),
-            child: Transform.rotate(
-              angle: value * 4 * pi,
-              child: Icon(
-                Icons.star,
-                color: Colors.yellow,
-                size: 20 * (1 - value * 0.7),
-              ),
-            ),
-          ),
-        );
-      },
-    );
+  void reassemble() {
+    super.reassemble();
+    _initializeGame();
   }
 }
