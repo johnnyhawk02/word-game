@@ -435,7 +435,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                     border: Border.all(
                       color: Colors.grey.withOpacity(0.5),
                       width: 2,
-                      style: BorderStyle.dashed,
+                      style: BorderStyle.solid,
                     ),
                   ),
                 ),
