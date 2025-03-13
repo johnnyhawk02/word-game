@@ -1,0 +1,10 @@
+[build]
+  command = """
+    curl -o- https://raw.githubusercontent.com/flutter/flutter/master/bin/internal/update_dart_sdk.sh | bash -s stable
+    git clone https://github.com/flutter/flutter.git
+    export PATH="$PATH:`pwd`/flutter/bin"
+    flutter precache
+    flutter pub get
+    flutter build web --release
+  """
+  publish = "build/web"
